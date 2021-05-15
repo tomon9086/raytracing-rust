@@ -1,0 +1,9 @@
+[package]
+name = "rust-raytracing"
+version = "0.1.0"
+authors = ["tomon9086 <tomon9086@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
