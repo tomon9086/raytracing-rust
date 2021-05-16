@@ -21,4 +21,13 @@ impl Float3 {
   pub fn saturate(&self) -> Self {
     Self::from_iter(self.iter().map(|item| item.min(1.).max(0.)))
   }
+
+  pub fn dot(&self, rhs: Self) -> f64 {
+    self
+      .iter()
+      .zip(rhs.iter())
+      .collect::<Vec<_>>()
+      .iter()
+      .fold(0., |p, (&l, &r)| p + l * r)
+  }
 }
