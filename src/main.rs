@@ -19,13 +19,12 @@ fn main() {
 
   let now_str = Local::now().format("%Y-%m-%d_%H-%M-%S").to_string();
   let filename = format!("{}.ppm", now_str);
-  let result = save(
+  match save(
     Path::new(&*format!("./output/{}", filename)),
     width,
     height,
     &pixels,
-  );
-  match result {
+  ) {
     Ok(path) => println!("output -> {}", path),
     Err(why) => println!("{:?}", why),
   }
