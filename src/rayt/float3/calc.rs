@@ -48,4 +48,8 @@ impl Float3 {
   pub fn norm(&self) -> f64 {
     self.norm_sq().sqrt()
   }
+
+  pub fn normalize(&self) -> Self {
+    *self / self.norm()
+  }
 }
