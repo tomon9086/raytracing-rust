@@ -40,4 +40,12 @@ impl Float3 {
       l[0] * r[1] - l[1] * r[0],
     ])
   }
+
+  pub fn norm_sq(&self) -> f64 {
+    self.iter().fold(0., |p, c| p + c * c)
+  }
+
+  pub fn norm(&self) -> f64 {
+    self.norm_sq().sqrt()
+  }
 }
