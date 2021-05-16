@@ -30,4 +30,14 @@ impl Float3 {
       .iter()
       .fold(0., |p, (&l, &r)| p + l * r)
   }
+
+  pub fn cross(&self, rhs: Self) -> Self {
+    let l = self.to_array();
+    let r = rhs.to_array();
+    Self([
+      l[1] * r[2] - l[2] * r[1],
+      l[2] * r[0] - l[0] * r[2],
+      l[0] * r[1] - l[1] * r[0],
+    ])
+  }
 }
