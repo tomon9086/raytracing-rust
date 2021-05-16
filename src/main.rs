@@ -1,7 +1,8 @@
 mod image;
+mod rayt;
 
+use crate::{image::*, rayt::*};
 use chrono::Local;
-use image::*;
 use std::path::Path;
 
 fn main() {
@@ -12,7 +13,7 @@ fn main() {
     .map(|(i, _)| {
       let x = (i as u32 % width) as f64;
       let y = (i as u32 / width) as f64;
-      return Color([x / width as f64, y / height as f64, 0.5]);
+      return Color::new(x / width as f64, y / height as f64, 0.5);
     })
     .collect::<Vec<Color>>();
 

@@ -1,11 +1,10 @@
+use crate::rayt::*;
 use std::{
   fs::{create_dir_all, File},
   io::prelude::Write,
   io::Result,
   path::Path,
 };
-
-pub struct Color(pub [f64; 3]);
 
 fn create_file(path: &Path) -> Result<File> {
   if let Some(parent) = path.parent() {
@@ -21,7 +20,7 @@ pub fn save_ppm(path: &Path, width: u32, height: u32, pixels: &[Color]) -> Resul
   writeln!(file, "P3")?;
   writeln!(file, "{} {}", width, height)?;
   writeln!(file, "255")?;
-  for Color([r, g, b]) in pixels {
+  for Float3([r, g, b]) in pixels {
     let f64_to_u8 = |f| (f * 255.) as u8;
     writeln!(file, "{} {} {}", f64_to_u8(r), f64_to_u8(g), f64_to_u8(b))?;
   }
