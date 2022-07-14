@@ -4,8 +4,19 @@ use num;
 use rgb::RGB;
 use std::{fs, io, path};
 
-type Color = RGB<u8>;
+type Color = RGB<f32>;
+type Color8 = RGB<u8>;
 type Vector3 = nalgebra::Vector3<f32>;
+
+trait ToColor8 {
+    fn to_color8(&self) -> Color8;
+}
+
+impl ToColor8 for Color {
+    fn to_color8(&self) -> Color8 {
+        self.iter().map(|c| (c * 255.) as u8).collect::<Color8>()
+    }
+}
 
 const EPS: f32 = 0.001;
 
@@ -16,7 +27,7 @@ fn main() {
         Sphere {
             shape: Shape {
                 material: Material {
-                    color: Vector3::new(1., 0., 0.),
+                    color: Color::new(1., 0., 0.),
                     emission: Vector3::new(0., 0., 0.),
                 },
             },
@@ -26,7 +37,7 @@ fn main() {
         Sphere {
             shape: Shape {
                 material: Material {
-                    color: Vector3::new(1., 1., 1.),
+                    color: Color::new(1., 1., 1.),
                     emission: Vector3::new(0., 0., 0.),
                 },
             },
@@ -67,17 +78,12 @@ fn main() {
                 }
             }
             if let Some(m) = min {
-                let color_vec = m.material.color * (directional_light.dot(&m.normal));
-                Color {
-                    r: (color_vec.x * 255.) as u8,
-                    g: (color_vec.y * 255.) as u8,
-                    b: (color_vec.z * 255.) as u8,
-                }
+                (m.material.color * (directional_light.dot(&m.normal))).to_color8()
             } else {
-                Color { r: 0, g: 0, b: 0 }
+                Color8::new(0, 0, 0)
             }
         })
-        .collect::<Vec<Color>>();
+        .collect::<Vec<Color8>>();
 
     save_image(
         &format!(
@@ -90,7 +96,7 @@ fn main() {
     .expect("error writing image");
 }
 
-fn save_image(filename: &str, pixels: &[Color], bounds: (usize, usize)) -> Result<(), io::Error> {
+fn save_image(filename: &str, pixels: &[Color8], bounds: (usize, usize)) -> Result<(), io::Error> {
     path::Path::new(filename).parent().and_then(|p| {
         if !p.exists() {
             let _ = fs::create_dir_all(p);
@@ -121,8 +127,7 @@ struct Ray {
 
 #[derive(Copy, Clone)]
 struct Material {
-    // TODO: Color型にしたい
-    color: Vector3,
+    color: Color,
     emission: Vector3,
 }
 
