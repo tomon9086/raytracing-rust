@@ -1,12 +1,10 @@
-use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
-use nalgebra;
-use num;
-use rgb::RGB;
-use std::{fs, io, path};
+#![allow(dead_code)]
 
-type Color = RGB<f32>;
-type Color8 = RGB<u8>;
-type Vector3 = nalgebra::Vector3<f32>;
+mod raytracing;
+
+use crate::raytracing::*;
+use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
+use std::{fs, io, path};
 
 trait ToColor8 {
     fn to_color8(&self) -> Color8;
@@ -18,7 +16,29 @@ impl ToColor8 for Color {
     }
 }
 
-const EPS: f32 = 0.001;
+fn save_image(filename: &str, pixels: &[Color8], bounds: (usize, usize)) -> Result<(), io::Error> {
+    path::Path::new(filename).parent().and_then(|p| {
+        if !p.exists() {
+            let _ = fs::create_dir_all(p);
+        }
+        Some(())
+    });
+
+    let file = fs::File::create(filename)?;
+
+    let encoder = PngEncoder::new(file);
+    let _ = encoder.write_image(
+        &pixels
+            .iter()
+            .flat_map(|p| [p.r, p.g, p.b])
+            .collect::<Vec<u8>>(),
+        bounds.0 as u32,
+        bounds.1 as u32,
+        ColorType::Rgb8,
+    );
+
+    Ok(())
+}
 
 fn main() {
     let bounds = (500, 500);
@@ -94,93 +114,4 @@ fn main() {
         bounds,
     )
     .expect("error writing image");
-}
-
-fn save_image(filename: &str, pixels: &[Color8], bounds: (usize, usize)) -> Result<(), io::Error> {
-    path::Path::new(filename).parent().and_then(|p| {
-        if !p.exists() {
-            let _ = fs::create_dir_all(p);
-        }
-        Some(())
-    });
-
-    let file = fs::File::create(filename)?;
-
-    let encoder = PngEncoder::new(file);
-    let _ = encoder.write_image(
-        &pixels
-            .iter()
-            .flat_map(|p| [p.r, p.g, p.b])
-            .collect::<Vec<u8>>(),
-        bounds.0 as u32,
-        bounds.1 as u32,
-        ColorType::Rgb8,
-    );
-
-    Ok(())
-}
-
-struct Ray {
-    origin: Vector3,
-    direction: Vector3,
-}
-
-#[derive(Copy, Clone)]
-struct Material {
-    color: Color,
-    emission: Vector3,
-}
-
-#[derive(Copy, Clone)]
-struct Intersection {
-    position: Vector3,
-    normal: Vector3,
-    distance: f32,
-    material: Material,
-}
-
-#[derive(Copy, Clone)]
-struct Shape {
-    material: Material,
-}
-
-trait Intersect {
-    fn intersect(&self, ray: &Ray) -> Option<Intersection>;
-}
-
-#[derive(Copy, Clone)]
-struct Sphere {
-    shape: Shape,
-
-    position: Vector3,
-    radius: f32,
-    // material: Material,
-}
-
-impl Intersect for Sphere {
-    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        let po = ray.origin - self.position;
-        let b = ray.direction.dot(&po);
-
-        let c = num::pow(po.norm(), 2) - self.radius * self.radius;
-        let det = b * b - c;
-        if det < 0. {
-            return None;
-        }
-        let t1 = -b - num::Float::sqrt(det);
-        let t2 = -b + num::Float::sqrt(det);
-        if t1 < EPS && t2 < EPS {
-            return None;
-        }
-        let distance = if t1 > EPS { t1 } else { t2 };
-        let position = ray.origin + ray.direction * distance;
-        let normal = (position - self.position).normalize();
-
-        Some(Intersection {
-            position: position,
-            normal: normal,
-            distance: distance,
-            material: self.shape.material,
-        })
-    }
 }
