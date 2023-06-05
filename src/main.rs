@@ -4,7 +4,11 @@ mod raytracing;
 
 use crate::raytracing::*;
 use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
+use rand::random;
+use rgb::Zeroable;
 use std::{fs, io, path};
+
+const SAMPLES_PER_PIXEL: u8 = 8;
 
 trait ToColor8 {
     fn to_color8(&self) -> Color8;
@@ -72,36 +76,43 @@ fn main() {
         .iter()
         .enumerate()
         .map(|(i, _p)| {
-            let x = i % bounds.0;
-            let y = i / bounds.0;
-            let u = x as f32 / bounds.0 as f32;
-            let v = 1. - y as f32 / bounds.1 as f32;
+            (0..SAMPLES_PER_PIXEL)
+                .into_iter()
+                .fold(Color8::zeroed(), |p, _| {
+                    let x = i % bounds.0;
+                    let y = i / bounds.0;
+                    let rx = random::<f32>();
+                    let ry = random::<f32>();
+                    let u = (x as f32 + rx) / bounds.0 as f32;
+                    let v = 1. - (y as f32 + ry) / bounds.1 as f32;
 
-            let ray = Ray {
-                origin: Vector3::new(0., 0., 5.),
-                direction: Vector3::new(u - 0.5, v - 0.5, -1.).normalize(),
-            };
-            let mut min: Option<Intersection> = None;
-            for shape in scene {
-                let intersection: Option<Intersection> = shape.intersect(&ray);
+                    let ray = Ray {
+                        origin: Vector3::new(0., 0., 5.),
+                        direction: Vector3::new(u - 0.5, v - 0.5, -1.).normalize(),
+                    };
+                    let mut min: Option<Intersection> = None;
+                    for shape in scene {
+                        let intersection: Option<Intersection> = shape.intersect(&ray);
 
-                min = match (min, intersection) {
-                    (Some(m), Some(i)) => {
-                        if m.distance > i.distance {
-                            Some(i)
-                        } else {
-                            min
+                        min = match (min, intersection) {
+                            (Some(m), Some(i)) => {
+                                if m.distance > i.distance {
+                                    Some(i)
+                                } else {
+                                    min
+                                }
+                            }
+                            (None, Some(i)) => Some(i),
+                            _ => min,
                         }
                     }
-                    (None, Some(i)) => Some(i),
-                    _ => min,
-                }
-            }
-            if let Some(m) = min {
-                (m.material.color * (directional_light.dot(&m.normal))).to_color8()
-            } else {
-                Color8::new(0, 0, 0)
-            }
+                    if let Some(m) = min {
+                        p + (m.material.color * (directional_light.dot(&m.normal))).to_color8()
+                            / SAMPLES_PER_PIXEL
+                    } else {
+                        p + Color8::new(0, 0, 0) / SAMPLES_PER_PIXEL
+                    }
+                })
         })
         .collect::<Vec<Color8>>();
 
