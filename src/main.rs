@@ -8,6 +8,7 @@ use rand::random;
 use rgb::Zeroable;
 use std::{fs, io, path};
 
+const BOUNDS: (usize, usize) = (500, 500);
 const SAMPLES_PER_PIXEL: u8 = 8;
 
 trait ToColor8 {
@@ -44,9 +45,7 @@ fn save_image(filename: &str, pixels: &[Color8], bounds: (usize, usize)) -> Resu
     Ok(())
 }
 
-fn main() {
-    let bounds = (500, 500);
-
+fn render() -> Vec<Color8> {
     let scene = [
         Sphere {
             shape: Shape {
@@ -72,19 +71,19 @@ fn main() {
     // let point_light = Vector3::new(2., 5., 2.);
     let directional_light = Vector3::new(2., 5., 2.).normalize();
 
-    let mut image_buffer = vec![0; bounds.0 * bounds.1]
+    vec![0; BOUNDS.0 * BOUNDS.1]
         .iter()
         .enumerate()
         .map(|(i, _p)| {
             (0..SAMPLES_PER_PIXEL)
                 .into_iter()
                 .fold(Color8::zeroed(), |p, _| {
-                    let x = i % bounds.0;
-                    let y = i / bounds.0;
+                    let x = i % BOUNDS.0;
+                    let y = i / BOUNDS.0;
                     let rx = random::<f32>();
                     let ry = random::<f32>();
-                    let u = (x as f32 + rx) / bounds.0 as f32;
-                    let v = 1. - (y as f32 + ry) / bounds.1 as f32;
+                    let u = (x as f32 + rx) / BOUNDS.0 as f32;
+                    let v = 1. - (y as f32 + ry) / BOUNDS.1 as f32;
 
                     let ray = Ray {
                         origin: Vector3::new(0., 0., 5.),
@@ -114,7 +113,11 @@ fn main() {
                     }
                 })
         })
-        .collect::<Vec<Color8>>();
+        .collect::<Vec<Color8>>()
+}
+
+fn main() {
+    let mut image_buffer = render();
 
     save_image(
         &format!(
@@ -122,7 +125,7 @@ fn main() {
             chrono::Local::now().format("%Y%m%d_%H%M%S")
         ),
         &mut image_buffer,
-        bounds,
+        BOUNDS,
     )
     .expect("error writing image");
 }
