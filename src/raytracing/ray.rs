@@ -14,7 +14,7 @@ pub struct Material {
 
 #[derive(Copy, Clone)]
 pub struct Intersection {
-    position: Vector3,
+    pub position: Vector3,
     pub normal: Vector3,
     pub distance: f32,
     pub material: Material,

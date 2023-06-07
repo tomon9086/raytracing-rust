@@ -4,7 +4,7 @@ mod raytracing;
 
 use crate::raytracing::*;
 use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
-use rand::random;
+use rand::{thread_rng, Rng};
 use rgb::Zeroable;
 use std::{fs, io, path};
 
@@ -45,7 +45,24 @@ fn save_image(filename: &str, pixels: &[Color8], bounds: (usize, usize)) -> Resu
     Ok(())
 }
 
-fn render() -> Vec<Color8> {
+fn random_direction() -> Vector3 {
+    let mut rng = thread_rng();
+
+    Vector3::new(
+        rng.gen_range(-1.0..1.0),
+        rng.gen_range(-1.0..1.0),
+        rng.gen_range(-1.0..1.0),
+    )
+    .normalize()
+}
+
+fn background(direction: Vector3) -> Color {
+    let t = 0.5 * (direction.normalize().y + 1.0);
+    let one = Color::new(1.0, 1.0, 1.0);
+    one + (Color::new(0.5, 0.7, 1.0) - one) * t
+}
+
+fn trace(ray: Ray, intersection: Option<Intersection>) -> Color {
     let scene = [
         Sphere {
             shape: Shape {
@@ -64,12 +81,47 @@ fn render() -> Vec<Color8> {
                     emission: Vector3::new(0., 0., 0.),
                 },
             },
-            position: Vector3::new(0., -100001., 0.),
-            radius: 100000.,
+            position: Vector3::new(0., -1001., 0.),
+            radius: 1000.,
         },
     ];
     // let point_light = Vector3::new(2., 5., 2.);
     let directional_light = Vector3::new(2., 5., 2.).normalize();
+
+    let mut min: Option<Intersection> = None;
+    for shape in scene {
+        let intersection: Option<Intersection> = shape.intersect(&ray);
+
+        min = match (min, intersection) {
+            (Some(m), Some(i)) => {
+                if m.distance > i.distance {
+                    Some(i)
+                } else {
+                    min
+                }
+            }
+            (None, Some(i)) => Some(i),
+            _ => min,
+        }
+    }
+    if let Some(m) = min {
+        let target = m.position + m.normal + random_direction();
+        trace(
+            Ray {
+                origin: m.position,
+                direction: target - m.position,
+            },
+            min,
+        ) * 0.5
+    } else if let Some(i) = intersection {
+        i.material.color * directional_light.dot(&i.normal)
+    } else {
+        background(ray.direction)
+    }
+}
+
+fn render() -> Vec<Color8> {
+    let mut rng = thread_rng();
 
     vec![0; BOUNDS.0 * BOUNDS.1]
         .iter()
@@ -80,8 +132,8 @@ fn render() -> Vec<Color8> {
                 .fold(Color8::zeroed(), |p, _| {
                     let x = i % BOUNDS.0;
                     let y = i / BOUNDS.0;
-                    let rx = random::<f32>();
-                    let ry = random::<f32>();
+                    let rx = rng.gen::<f32>();
+                    let ry = rng.gen::<f32>();
                     let u = (x as f32 + rx) / BOUNDS.0 as f32;
                     let v = 1. - (y as f32 + ry) / BOUNDS.1 as f32;
 
@@ -89,28 +141,7 @@ fn render() -> Vec<Color8> {
                         origin: Vector3::new(0., 0., 5.),
                         direction: Vector3::new(u - 0.5, v - 0.5, -1.).normalize(),
                     };
-                    let mut min: Option<Intersection> = None;
-                    for shape in scene {
-                        let intersection: Option<Intersection> = shape.intersect(&ray);
-
-                        min = match (min, intersection) {
-                            (Some(m), Some(i)) => {
-                                if m.distance > i.distance {
-                                    Some(i)
-                                } else {
-                                    min
-                                }
-                            }
-                            (None, Some(i)) => Some(i),
-                            _ => min,
-                        }
-                    }
-                    if let Some(m) = min {
-                        p + (m.material.color * (directional_light.dot(&m.normal))).to_color8()
-                            / SAMPLES_PER_PIXEL
-                    } else {
-                        p + Color8::new(0, 0, 0) / SAMPLES_PER_PIXEL
-                    }
+                    p + trace(ray, None).to_color8() / SAMPLES_PER_PIXEL
                 })
         })
         .collect::<Vec<Color8>>()
