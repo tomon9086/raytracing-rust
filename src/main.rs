@@ -49,12 +49,17 @@ fn save_image(filename: &str, pixels: &[Color8], bounds: (usize, usize)) -> Resu
 fn random_direction() -> Vector3 {
     let mut rng = thread_rng();
 
-    Vector3::new(
-        rng.gen_range(-1.0..=1.0),
-        rng.gen_range(-1.0..=1.0),
-        rng.gen_range(-1.0..=1.0),
-    )
-    .normalize()
+    loop {
+        let d = Vector3::new(
+            rng.gen_range(-1.0..=1.0),
+            rng.gen_range(-1.0..=1.0),
+            rng.gen_range(-1.0..=1.0),
+        );
+
+        if d.norm_squared() < 1.0 {
+            return d;
+        }
+    }
 }
 
 fn background(direction: Vector3) -> Color {
