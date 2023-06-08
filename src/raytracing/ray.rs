@@ -65,3 +65,42 @@ impl Intersect for Sphere {
         })
     }
 }
+
+pub struct Scene {
+    pub objects: Vec<Box<dyn Intersect>>,
+}
+
+impl Scene {
+    pub fn new() -> Scene {
+        Scene {
+            objects: Vec::new(),
+        }
+    }
+
+    pub fn push(&mut self, object: Box<dyn Intersect>) {
+        self.objects.push(object);
+    }
+}
+
+impl Intersect for Scene {
+    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+        let mut min: Option<Intersection> = None;
+        for shape in &self.objects {
+            let intersection: Option<Intersection> = shape.intersect(&ray);
+
+            min = match (min, intersection) {
+                (Some(m), Some(i)) => {
+                    if m.distance > i.distance {
+                        Some(i)
+                    } else {
+                        min
+                    }
+                }
+                (None, Some(i)) => Some(i),
+                _ => min,
+            }
+        }
+
+        min
+    }
+}

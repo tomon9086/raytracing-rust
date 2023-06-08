@@ -64,57 +64,53 @@ fn background(direction: Vector3) -> Color {
 }
 
 fn trace(ray: Ray, intersection: Option<Intersection>) -> Color {
-    let scene = [
-        Sphere {
-            shape: Shape {
-                material: Material {
-                    color: Color::new(1., 0., 0.),
-                    emission: Vector3::new(0., 0., 0.),
-                },
+    let mut scene = Scene::new();
+    scene.push(Box::new(Sphere {
+        shape: Shape {
+            material: Material {
+                color: Color::new(1., 0., 0.),
+                emission: Vector3::new(0., 0., 0.),
             },
-            position: Vector3::new(0., 0., 0.),
-            radius: 1.,
         },
-        Sphere {
-            shape: Shape {
-                material: Material {
-                    color: Color::new(1., 1., 1.),
-                    emission: Vector3::new(0., 0., 0.),
-                },
+        position: Vector3::new(0., 0., 0.),
+        radius: 1.,
+    }));
+    scene.push(Box::new(Sphere {
+        shape: Shape {
+            material: Material {
+                color: Color::new(1., 1., 1.),
+                emission: Vector3::new(0., 0., 0.),
             },
-            position: Vector3::new(0., -1001., 0.),
-            radius: 1000.,
         },
-    ];
+        position: Vector3::new(0., -1001., 0.),
+        radius: 1000.,
+    }));
+
+    let scene_intersection = scene.intersect(&ray);
+
     // let point_light = Vector3::new(2., 5., 2.);
-    let directional_light = Vector3::new(2., 5., 2.).normalize();
+    let directional_light = Vector3::new(1., 1., 1.).normalize();
 
-    let mut min: Option<Intersection> = None;
-    for shape in scene {
-        let intersection: Option<Intersection> = shape.intersect(&ray);
-
-        min = match (min, intersection) {
-            (Some(m), Some(i)) => {
-                if m.distance > i.distance {
-                    Some(i)
-                } else {
-                    min
-                }
-            }
-            (None, Some(i)) => Some(i),
-            _ => min,
-        }
-    }
-    if let Some(m) = min {
-        let target = m.position + m.normal + random_direction();
+    if let Some(si) = scene_intersection {
+        let target = si.position + si.normal + random_direction();
         trace(
             Ray {
-                origin: m.position,
-                direction: target - m.position,
+                origin: si.position,
+                direction: target - si.position,
             },
-            min,
+            scene_intersection,
         ) * 0.5
     } else if let Some(i) = intersection {
+        let shadow_ray = Ray {
+            origin: i.position,
+            direction: directional_light,
+        };
+        let shadow_intersection = scene.intersect(&shadow_ray);
+
+        if let Some(si) = shadow_intersection {
+            return i.material.color * (directional_light.dot(&si.normal));
+        }
+
         i.material.color * directional_light.dot(&i.normal)
     } else {
         background(ray.direction)
