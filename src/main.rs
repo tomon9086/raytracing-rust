@@ -102,7 +102,7 @@ fn trace(ray: Ray, intersection: Option<Intersection>) -> Color {
         ) * 0.5
     } else if let Some(i) = intersection {
         let shadow_ray = Ray {
-            origin: i.position,
+            origin: i.position + 0.001 * i.normal,
             direction: directional_light,
         };
         let shadow_intersection = scene.intersect(&shadow_ray);
