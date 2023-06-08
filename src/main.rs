@@ -5,6 +5,7 @@ mod raytracing;
 use crate::raytracing::*;
 use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
 use rand::{thread_rng, Rng};
+use rayon::prelude::*;
 use rgb::Zeroable;
 use std::{fs, io, path};
 
@@ -121,15 +122,15 @@ fn trace(ray: Ray, intersection: Option<Intersection>) -> Color {
 }
 
 fn render() -> Vec<Color8> {
-    let mut rng = thread_rng();
-
     vec![0; BOUNDS.0 * BOUNDS.1]
-        .iter()
+        .par_iter()
         .enumerate()
         .map(|(i, _p)| {
             (0..SAMPLES_PER_PIXEL)
                 .into_iter()
                 .fold(Color8::zeroed(), |p, _| {
+                    let mut rng = thread_rng();
+
                     let x = i % BOUNDS.0;
                     let y = i / BOUNDS.0;
                     let rx = rng.gen::<f32>();
