@@ -12,16 +12,6 @@ use std::{fs, io, path};
 const BOUNDS: (usize, usize) = (500, 500);
 const SAMPLES_PER_PIXEL: u8 = 8;
 
-trait ToColor8 {
-    fn to_color8(&self) -> Color8;
-}
-
-impl ToColor8 for Color {
-    fn to_color8(&self) -> Color8 {
-        self.iter().map(|c| (c * 255.) as u8).collect::<Color8>()
-    }
-}
-
 fn save_image(filename: &str, pixels: &[Color8], bounds: (usize, usize)) -> Result<(), io::Error> {
     path::Path::new(filename).parent().and_then(|p| {
         if !p.exists() {
@@ -143,7 +133,7 @@ fn render() -> Vec<Color8> {
                         origin: Vector3::new(0., 0., 5.),
                         direction: Vector3::new(u - 0.5, v - 0.5, -1.).normalize(),
                     };
-                    p + trace(ray, None).to_color8() / SAMPLES_PER_PIXEL
+                    p + trace(ray, None).srgb().to_color8() / SAMPLES_PER_PIXEL
                 })
         })
         .collect::<Vec<Color8>>()
