@@ -58,7 +58,7 @@ fn background(direction: Vector3) -> Color {
     one + (Color::new(0.5, 0.7, 1.0) - one) * t
 }
 
-fn trace(ray: Ray, intersection: Option<Intersection>) -> Color {
+fn trace(ray: Ray, first_intersection: Option<Intersection>) -> Color {
     let mut scene = Scene::new();
     scene.push(Box::new(Sphere {
         shape: Shape {
@@ -93,20 +93,22 @@ fn trace(ray: Ray, intersection: Option<Intersection>) -> Color {
                 origin: si.position,
                 direction: target - si.position,
             },
-            scene_intersection,
+            first_intersection.or(scene_intersection),
         ) * 0.5
-    } else if let Some(i) = intersection {
+    } else if let Some(fi) = first_intersection {
         let shadow_ray = Ray {
-            origin: i.position + 0.001 * i.normal,
+            origin: fi.position + 0.001 * fi.normal,
             direction: directional_light,
         };
         let shadow_intersection = scene.intersect(&shadow_ray);
 
-        if let Some(si) = shadow_intersection {
-            return i.material.color * (directional_light.dot(&si.normal));
+        if let Some(_) = shadow_intersection {
+            // 衝突点から光源までにオブジェクトが存在する = 影
+            Color::zeroed()
+        } else {
+            let directional_light_color = Color::new(1.0, 1.0, 1.0);
+            return directional_light_color * fi.material.color * directional_light.dot(&fi.normal);
         }
-
-        i.material.color * directional_light.dot(&i.normal)
     } else {
         background(ray.direction)
     }
