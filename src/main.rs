@@ -58,7 +58,7 @@ fn background(direction: Vector3) -> Color {
     one + (Color::new(0.5, 0.7, 1.0) - one) * t
 }
 
-fn trace(ray: Ray, first_intersection: Option<Intersection>) -> Color {
+fn trace(ray: Ray, prev_intersection: Option<Intersection>) -> Color {
     let mut scene = Scene::new();
     scene.push(Box::new(Sphere {
         shape: Shape {
@@ -83,21 +83,46 @@ fn trace(ray: Ray, first_intersection: Option<Intersection>) -> Color {
 
     let scene_intersection = scene.intersect(&ray);
 
-    // let point_light = Vector3::new(2., 5., 2.);
     let directional_light = Vector3::new(1., 1., 1.).normalize();
+    // ?: 単色光にしたとき、単色の球がまっくろになる（グレースケールにならない）のは正しいのか？
+    let directional_light_color = Color::new(1.0, 1.0, 1.0);
 
     if let Some(si) = scene_intersection {
+        let reflection_coefficient = 0.5;
         let target = si.position + si.normal + random_direction();
-        trace(
-            Ray {
-                origin: si.position,
-                direction: target - si.position,
-            },
-            first_intersection.or(scene_intersection),
-        ) * 0.5
-    } else if let Some(fi) = first_intersection {
+        if let Some(pi) = prev_intersection {
+            // 反射元の衝突点を光源とみなす
+            return (pi.material.color
+                * si.material.color
+                * (pi.position - si.position).dot(&si.normal)
+                * reflection_coefficient
+                + trace(
+                    Ray {
+                        origin: si.position,
+                        direction: target - si.position,
+                    },
+                    scene_intersection,
+                ))
+                * 0.5 // average
+                * reflection_coefficient;
+        } else {
+            (directional_light_color
+                * si.material.color
+                * directional_light.dot(&si.normal)
+                * reflection_coefficient
+                + trace(
+                    Ray {
+                        origin: si.position,
+                        direction: target - si.position,
+                    },
+                    scene_intersection,
+                ))
+                * 0.5 // average
+                * reflection_coefficient
+        }
+    } else if let Some(pi) = prev_intersection {
         let shadow_ray = Ray {
-            origin: fi.position + 0.001 * fi.normal,
+            origin: pi.position + 0.001 * pi.normal,
             direction: directional_light,
         };
         let shadow_intersection = scene.intersect(&shadow_ray);
@@ -106,8 +131,7 @@ fn trace(ray: Ray, first_intersection: Option<Intersection>) -> Color {
             // 衝突点から光源までにオブジェクトが存在する = 影
             Color::zeroed()
         } else {
-            let directional_light_color = Color::new(1.0, 1.0, 1.0);
-            return directional_light_color * fi.material.color * directional_light.dot(&fi.normal);
+            return directional_light_color * pi.material.color * directional_light.dot(&pi.normal);
         }
     } else {
         background(ray.direction)
